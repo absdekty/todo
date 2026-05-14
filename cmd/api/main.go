@@ -4,6 +4,7 @@ import (
 	"todo/internal/config"
 	"todo/internal/delivery/rest"
 	"todo/internal/repository/sqlite"
+	"todo/internal/server"
 	"todo/internal/service"
 	"todo/pkg/logger"
 )
@@ -24,8 +25,19 @@ func main() {
 	/* Сервис */
 	serv := service.New(repo)
 
-	/* REST */
+	/* REST API */
 	restHandler := rest.NewHandler(serv)
 	restRouter := rest.NewRouter(restHandler)
-	rest.StartServer(restRouter, ":"+cfg.RestPort)
+
+	restServer := server.NewRESTServer(restRouter,
+		server.RESTServerConfig{
+			Addr:         ":" + cfg.RestPort,
+			ReadTimeout:  cfg.ReadTimeout,
+			WriteTimeout: cfg.WriteTimeout,
+			IdleTimeout:  cfg.IdleTimeout,
+			GSTime:       cfg.Shutdown})
+
+	if err := restServer.Run(); err != nil {
+		logger.Error.Printf("ошибка остановки сервера")
+	}
 }
