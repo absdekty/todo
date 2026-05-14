@@ -1,0 +1,4 @@
+*.db
+*.exe
+*.local.env
+bin/*

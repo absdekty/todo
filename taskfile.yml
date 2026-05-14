@@ -1,0 +1,59 @@
+version: '3'
+
+vars:
+  MAIN_PATH: ./cmd/api/main.go
+  BIN_NAME: todo
+  BIN_DIR: bin
+
+tasks:
+  run:
+    desc: "Запустить приложение"
+    cmds:
+      - go run {{.MAIN_PATH}}
+
+  build:
+    desc: "Забилдить приложение"
+    cmds:
+      - go build -o bin/todo.exe {{.MAIN_PATH}}
+      - echo "открывать через task run-installed(для загрузки конфига .env)"
+
+  run-installed:
+     cmds:
+      - ./bin/todo.exe
+      
+  test:
+    desc: "Запустить все тесты"
+    cmds:
+      - go test -v ./...
+
+  dev:
+    desc: "Запуск в режиме разработки"
+    cmds:
+      - go run {{.MAIN_PATH}}
+    env:
+      APP_MODE: dev
+
+  fmt:
+    desc: "Форматировать код"
+    cmds:
+      - go fmt ./...
+
+  tidy:
+    desc: "Подчистить зависимости"
+    cmds:
+      - go mod tidy
+
+  clean:
+    desc: "Удалить .db .exe файлы"
+    cmds:
+      - rm -f *.db
+      - rm -f bin/*.db
+      - rm -f bin/*.exe
+
+  all:
+    desc: "Полная проверка (fmt + tidy + test + build)"
+    cmds:
+      - task: fmt
+      - task: tidy
+      - task: test
+      - task: build
