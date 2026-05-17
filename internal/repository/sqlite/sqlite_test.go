@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"testing"
+	"errors"
 	"todo/internal/model"
 )
 
@@ -60,7 +61,9 @@ func TestGetTasks(t *testing.T) {
 
 func TestGetTaskByID(t *testing.T) {
 	if _, err := setupDB(t).GetTaskByID(context.Background(), ""); err != nil {
-		t.Errorf("not expected error, but got: %v", err)
+		if !errors.Is(err, model.ErrTaskNotExist) {
+			t.Errorf("not expected error, but got: %v", err)
+		}
 	}
 }
 
