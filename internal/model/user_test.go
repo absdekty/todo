@@ -6,48 +6,49 @@ import (
 	"testing"
 )
 
-func TestNewTask(t *testing.T) {
+func TestNewUser(t *testing.T) {
 	tests := []struct {
-		name        string
-		title       string
-		description string
-		wantErr     error
+		name     string
+		uname    string
+		password string
+		wantErr  error
 	}{
 		{
-			name:        "Валидные данные",
-			title:       "Title",
-			description: "",
-			wantErr:     nil,
+			name:     "Валидные данные",
+			uname:    "UserName",
+			password: "UserPassword",
+			wantErr:  nil,
 		},
 		{
-			name:        "Короткое название",
-			title:       "..",
-			description: "",
-			wantErr:     ErrTaskTitleTooShort,
+			name:     "Короткое имя",
+			uname:    "..",
+			password: "",
+			wantErr:  ErrUserNameTooShort,
 		},
 		{
-			name:        "Длинное название",
-			title:       strings.Repeat("a", 16),
-			description: "",
-			wantErr:     ErrTaskTitleTooLong,
+			name:     "Длинное имя",
+			uname:    strings.Repeat("a", 16),
+			password: "",
+			wantErr:  ErrUserNameTooLong,
+		},
+		// Валидация пароля происходит в сервисе; структура содержит HASH пароля.
+		{
+			name:     "Короткий пароль",
+			uname:    "UserName",
+			password: "..",
+			wantErr:  nil,
 		},
 		{
-			name:        "Пустое описание",
-			title:       "Title",
-			description: "",
-			wantErr:     nil,
-		},
-		{
-			name:        "Длинное описание",
-			title:       "Title",
-			description: strings.Repeat("a", 201),
-			wantErr:     ErrTaskDescriptionTooLong,
+			name:     "Длинный пароль",
+			uname:    "UserName",
+			password: strings.Repeat("a", 30),
+			wantErr:  nil,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := NewTask("550e8400-e29b-41d4-a716-446655440000", tt.title, tt.description)
+			_, err := NewUser(tt.uname, tt.password)
 			if err != tt.wantErr {
 				t.Errorf("expected err %v, but got %v", tt.wantErr, err)
 			}
@@ -55,7 +56,7 @@ func TestNewTask(t *testing.T) {
 	}
 }
 
-func TestTaskValidateTitle(t *testing.T) {
+func TestUserValidateName(t *testing.T) {
 	tests := []struct {
 		name    string
 		data    string
@@ -63,29 +64,29 @@ func TestTaskValidateTitle(t *testing.T) {
 	}{
 		{
 			name:    "Валидные данные",
-			data:    "Title",
+			data:    "UserName",
 			wantErr: nil,
 		},
 		{
-			name:    "Короткое название",
+			name:    "Короткое имя",
 			data:    "..",
-			wantErr: ErrTaskTitleTooShort,
+			wantErr: ErrUserNameTooShort,
 		},
 		{
-			name:    "Длинное название",
-			data:    strings.Repeat("a", 16),
-			wantErr: ErrTaskTitleTooLong,
+			name:    "Длинное имя",
+			data:    strings.Repeat("a", 30),
+			wantErr: ErrUserNameTooLong,
 		},
 		{
 			name:    "Просто пробелы",
 			data:    "     ",
-			wantErr: ErrTaskTitleTooShort,
+			wantErr: ErrUserNameTooShort,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := TaskValidateTitle(tt.data)
+			err := UserValidateName(tt.data)
 			if err != tt.wantErr {
 				t.Errorf("expected err %v, but got %v", tt.wantErr, err)
 			}
@@ -93,7 +94,7 @@ func TestTaskValidateTitle(t *testing.T) {
 	}
 }
 
-func TestTaskValidateDescription(t *testing.T) {
+func TestUserValidateDescription(t *testing.T) {
 	tests := []struct {
 		name    string
 		data    string
@@ -101,29 +102,29 @@ func TestTaskValidateDescription(t *testing.T) {
 	}{
 		{
 			name:    "Валидные данные",
-			data:    "description",
+			data:    "UserPassword",
 			wantErr: nil,
 		},
 		{
-			name:    "Пустое описание",
+			name:    "Пустой пароль",
 			data:    "",
-			wantErr: nil,
+			wantErr: ErrUserPasswordTooShort,
 		},
 		{
-			name:    "Длинное описание",
-			data:    strings.Repeat("a", 201),
-			wantErr: ErrTaskDescriptionTooLong,
+			name:    "Длинный пароль",
+			data:    strings.Repeat("a", 30),
+			wantErr: ErrUserPasswordTooLong,
 		},
 		{
 			name:    "Просто пробелы",
 			data:    "     ",
-			wantErr: nil,
+			wantErr: ErrUserPasswordTooShort,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := TaskValidateDescription(tt.data)
+			err := UserValidatePassword(tt.data)
 			if err != tt.wantErr {
 				t.Errorf("expected err %v, but got %v", tt.wantErr, err)
 			}
@@ -131,7 +132,7 @@ func TestTaskValidateDescription(t *testing.T) {
 	}
 }
 
-func TestTaskValidateID(t *testing.T) {
+func TestUserValidateID(t *testing.T) {
 	tests := []struct {
 		name    string
 		data    string
@@ -166,7 +167,7 @@ func TestTaskValidateID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := TaskValidateID(tt.data)
+			err := UserValidateID(tt.data)
 			if err != nil && !tt.wantErr {
 				t.Errorf("not expected err, but got %v", err)
 			}
