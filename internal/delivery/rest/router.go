@@ -9,9 +9,13 @@ func NewRouter(handler *RestHandler) *chi.Mux {
 
 	setupMiddleware(r)
 
+	r.Post("/register", handler.RegisterUser)
+	r.Post("/login", handler.LoginUser)
 	r.Get("/", handler.mainHandler)
 
 	r.Route("/tasks", func(r chi.Router) {
+		r.Use(handler.AuthMiddleware)
+
 		r.Get("/", handler.getAllTasks) // GET /tasks - список всех задач
 		r.Post("/", handler.createTask) // POST /tasks - создать задачу
 

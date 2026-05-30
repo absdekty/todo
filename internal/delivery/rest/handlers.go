@@ -6,24 +6,105 @@ import (
 	"github.com/go-chi/chi/v5"
 	"net/http"
 	"todo/internal/model"
-	"todo/internal/service"
 )
 
 type RestHandler struct {
-	serv service.ServiceI
+	task ServiceTask
+	user ServiceUser
+	jwt  ServiceJWT
 }
 
-func NewHandler(serv service.ServiceI) *RestHandler {
-	return &RestHandler{serv: serv}
+func NewHandler(task ServiceTask, user ServiceUser, jwt ServiceJWT) *RestHandler {
+	return &RestHandler{task: task, user: user, jwt: jwt}
 }
 
 func (h *RestHandler) mainHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Default Page"))
 }
 
-func (h *RestHandler) getAllTasks(w http.ResponseWriter, r *http.Request) {
-	tasks, err := h.serv.GetTasks(r.Context())
+func (h *RestHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
+	var req UserCreate
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid JSON format", http.StatusBadRequest)
+		return
+	}
+
+	if err := h.user.CreateUser(r.Context(), req.Name, req.Password); err != nil {
+		if errors.Is(err, model.ErrUserNameTooShort) || errors.Is(err, model.ErrUserNameTooLong) {
+			http.Error(w, "Name must be 3-10 characters", http.StatusBadRequest)
+			return
+		}
+
+		if errors.Is(err, model.ErrUserPasswordTooShort) || errors.Is(err, model.ErrUserPasswordTooLong) {
+			http.Error(w, "Password must be 8-16 characters", http.StatusBadRequest)
+			return
+		}
+
+		if errors.Is(err, model.ErrUserAlreadyExist) {
+			http.Error(w, "User already exists", http.StatusConflict)
+			return
+		}
+
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+}
+
+func (h *RestHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
+	var req UserCreate
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid JSON format", http.StatusBadRequest)
+		return
+	}
+
+	userID, err := h.user.Login(r.Context(), req.Name, req.Password)
 	if err != nil {
+		if errors.Is(err, model.ErrUserNotExist) {
+			http.Error(w, "User not exist", http.StatusNotFound)
+			return
+		}
+
+		if errors.Is(err, model.ErrUserInvalidPW) {
+			http.Error(w, "Invalid password", http.StatusUnauthorized)
+			return
+		}
+
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	token, err := h.jwt.GenerateToken(userID)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"user_id":    userID,
+		"token":      token,
+		"token_type": "Bearer",
+	})
+}
+
+func (h *RestHandler) getAllTasks(w http.ResponseWriter, r *http.Request) {
+	userID, err := GetUserID(r.Context())
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	tasks, err := h.task.GetTasks(r.Context(), userID)
+	if err != nil {
+		if errors.Is(err, model.ErrUserNotExist) {
+			http.Error(w, "User not found", http.StatusNotFound)
+			return
+		}
+
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{
@@ -41,9 +122,20 @@ func (h *RestHandler) getAllTasks(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *RestHandler) getTaskByID(w http.ResponseWriter, r *http.Request) {
-	taskID := chi.URLParam(r, "id")
-	task, err := h.serv.GetTaskByID(r.Context(), taskID)
+	userID, err := GetUserID(r.Context())
 	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	taskID := chi.URLParam(r, "id")
+	task, err := h.task.GetTaskByID(r.Context(), userID, taskID)
+	if err != nil {
+		if errors.Is(err, model.ErrUserNotExist) {
+			http.Error(w, "User not found", http.StatusNotFound)
+			return
+		}
+
 		if errors.Is(err, model.ErrTaskInvalidID) {
 			http.Error(w, "Invalid task ID format", http.StatusBadRequest)
 			return
@@ -69,14 +161,25 @@ func (h *RestHandler) getTaskByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *RestHandler) createTask(w http.ResponseWriter, r *http.Request) {
+	userID, err := GetUserID(r.Context())
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	var req TaskCreate
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid JSON format", http.StatusBadRequest)
 		return
 	}
 
-	task, err := h.serv.CreateTask(r.Context(), req.Title, req.Description)
+	task, err := h.task.CreateTask(r.Context(), userID, req.Title, req.Description)
 	if err != nil {
+		if errors.Is(err, model.ErrUserNotExist) {
+			http.Error(w, "User not found", http.StatusNotFound)
+			return
+		}
+
 		if errors.Is(err, model.ErrTaskTitleTooShort) || errors.Is(err, model.ErrTaskTitleTooLong) {
 			http.Error(w, "Incorrect title: symbols 3-15", http.StatusBadRequest)
 			return
@@ -92,7 +195,7 @@ func (h *RestHandler) createTask(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(TaskResponse{
 		ID:          task.ID,
 		Title:       task.Title,
@@ -102,9 +205,20 @@ func (h *RestHandler) createTask(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *RestHandler) putTask(w http.ResponseWriter, r *http.Request) {
-	taskID := chi.URLParam(r, "id")
-	task, err := h.serv.GetTaskByID(r.Context(), taskID)
+	userID, err := GetUserID(r.Context())
 	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	taskID := chi.URLParam(r, "id")
+	task, err := h.task.GetTaskByID(r.Context(), userID, taskID)
+	if err != nil {
+		if errors.Is(err, model.ErrUserNotExist) {
+			http.Error(w, "User not found", http.StatusNotFound)
+			return
+		}
+
 		if errors.Is(err, model.ErrTaskInvalidID) {
 			http.Error(w, "Invalid task ID format", http.StatusBadRequest)
 			return
@@ -137,7 +251,7 @@ func (h *RestHandler) putTask(w http.ResponseWriter, r *http.Request) {
 
 	task.SetCompleted(req.Completed)
 
-	err = h.serv.UpdateTask(r.Context(), task)
+	err = h.task.UpdateTask(r.Context(), task)
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -154,9 +268,20 @@ func (h *RestHandler) putTask(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *RestHandler) patchTask(w http.ResponseWriter, r *http.Request) {
-	taskID := chi.URLParam(r, "id")
-	task, err := h.serv.GetTaskByID(r.Context(), taskID)
+	userID, err := GetUserID(r.Context())
 	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	taskID := chi.URLParam(r, "id")
+	task, err := h.task.GetTaskByID(r.Context(), userID, taskID)
+	if err != nil {
+		if errors.Is(err, model.ErrUserNotExist) {
+			http.Error(w, "User not found", http.StatusNotFound)
+			return
+		}
+
 		if errors.Is(err, model.ErrTaskInvalidID) {
 			http.Error(w, "Invalid task ID format", http.StatusBadRequest)
 			return
@@ -187,7 +312,7 @@ func (h *RestHandler) patchTask(w http.ResponseWriter, r *http.Request) {
 		task.SetCompleted(completed)
 	}
 
-	if err := h.serv.UpdateTask(r.Context(), task); err != nil {
+	if err := h.task.UpdateTask(r.Context(), task); err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
@@ -203,8 +328,19 @@ func (h *RestHandler) patchTask(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *RestHandler) deleteTask(w http.ResponseWriter, r *http.Request) {
+	userID, err := GetUserID(r.Context())
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	taskID := chi.URLParam(r, "id")
-	if err := h.serv.DeleteTask(r.Context(), taskID); err != nil {
+	if err := h.task.DeleteTask(r.Context(), userID, taskID); err != nil {
+		if errors.Is(err, model.ErrUserNotExist) {
+			http.Error(w, "User not found", http.StatusNotFound)
+			return
+		}
+
 		if errors.Is(err, model.ErrTaskInvalidID) {
 			http.Error(w, "Invalid task ID format", http.StatusBadRequest)
 			return

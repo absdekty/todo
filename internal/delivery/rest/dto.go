@@ -22,3 +22,12 @@ type TaskUpdateFull struct {
 	Description string `json:"desc"`
 	Completed   bool   `json:"completed"`
 }
+
+type UserCreate struct {
+	Name     string `json:"name"`
+	Password string `json:"password"`
+}
+
+type UserResponse struct {
+	ID string `json:"id"`
+}

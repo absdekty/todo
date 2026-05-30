@@ -10,12 +10,29 @@ var (
 	ErrTaskInvalidID          = errors.New("Невалидный ID задачи")
 )
 
+/* model/user.go */
+var (
+	ErrUserNameTooShort     = errors.New("Минимальная длина имени - 3 символа")
+	ErrUserNameTooLong      = errors.New("Максимальная длина имени - 10 символов")
+	ErrUserPasswordTooShort = errors.New("Минимальная длина пароля - 8 символов")
+	ErrUserPasswordTooLong  = errors.New("Максимальная длина пароля - 16 символов")
+	ErrUserInvalidID        = errors.New("Невалидный ID пользователя")
+)
+
 /* repository */
 var (
-	ErrTaskNotExist = errors.New("задача не существует")
+	ErrTaskNotExist     = errors.New("Задача не существует")
+	ErrUserNotExist     = errors.New("Пользователь не существует")
+	ErrUserAlreadyExist = errors.New("Пользователь с таким name уже существует")
 )
 
 /* service */
 var (
-	ErrTaskIsNil = errors.New("задача не может быть ниловой")
+	ErrTaskIsNil     = errors.New("Задача не может быть ниловой")
+	ErrUserInvalidPW = errors.New("Неверный пароль")
+)
+
+/* handler */
+var (
+	ErrUnauthorized = errors.New("Ошибка авторизации")
 )

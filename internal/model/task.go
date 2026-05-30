@@ -4,10 +4,12 @@ import (
 	"github.com/google/uuid"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 type Task struct {
 	ID          string
+	UserID      string
 	Title       string
 	Description string
 	Completed   bool
@@ -16,17 +18,18 @@ type Task struct {
 }
 
 /* Конструктор */
-func NewTask(title, description string) (*Task, error) {
-	if err := ValidateTitle(title); err != nil {
+func NewTask(userID, title, description string) (*Task, error) {
+	if err := TaskValidateTitle(title); err != nil {
 		return nil, err
 	}
 
-	if err := ValidateDescription(description); err != nil {
+	if err := TaskValidateDescription(description); err != nil {
 		return nil, err
 	}
 
 	return &Task{
 		ID:          uuid.New().String(),
+		UserID:      userID,
 		Title:       strings.TrimSpace(title),
 		Description: strings.TrimSpace(description),
 		CreatedAt:   time.Now().UTC(),
@@ -35,31 +38,35 @@ func NewTask(title, description string) (*Task, error) {
 }
 
 /* Валидация */
-func ValidateTitle(title string) error {
+func TaskValidateTitle(title string) error {
 	title = strings.TrimSpace(title)
 
-	if len(title) < 3 {
+	runeCount := utf8.RuneCountInString(title)
+
+	if runeCount < 3 {
 		return ErrTaskTitleTooShort
 	}
 
-	if len(title) > 15 {
+	if runeCount > 15 {
 		return ErrTaskTitleTooLong
 	}
 
 	return nil
 }
 
-func ValidateDescription(description string) error {
+func TaskValidateDescription(description string) error {
 	description = strings.TrimSpace(description)
 
-	if len(description) > 200 {
+	runeCount := utf8.RuneCountInString(description)
+
+	if runeCount > 200 {
 		return ErrTaskDescriptionTooLong
 	}
 
 	return nil
 }
 
-func ValidateID(id string) error {
+func TaskValidateID(id string) error {
 	if _, err := uuid.Parse(id); err != nil {
 		return ErrTaskInvalidID
 	}
@@ -69,7 +76,7 @@ func ValidateID(id string) error {
 
 /* Методы */
 func (t *Task) SetTitle(title string) error {
-	if err := ValidateTitle(title); err != nil {
+	if err := TaskValidateTitle(title); err != nil {
 		return err
 	}
 
@@ -80,7 +87,7 @@ func (t *Task) SetTitle(title string) error {
 }
 
 func (t *Task) SetDescription(description string) error {
-	if err := ValidateDescription(description); err != nil {
+	if err := TaskValidateDescription(description); err != nil {
 		return err
 	}
 

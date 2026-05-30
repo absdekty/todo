@@ -6,6 +6,7 @@ import (
 	"todo/internal/repository/sqlite"
 	"todo/internal/server"
 	"todo/internal/service"
+	"todo/pkg/hasher"
 	"todo/pkg/logger"
 )
 
@@ -17,16 +18,33 @@ func main() {
 	logger.Init(cfg.AppMode == "dev")
 
 	/* Репозиторий */
-	repo, err := repository.New(cfg.DBPath)
+	db, err := sqlite.New(cfg.DBPath)
 	if err != nil {
 		logger.Error.Fatalf("ошибка запуска репозитория: %v", err)
 	}
+	defer func() {
+		if err := db.Close(); err != nil {
+			logger.Error.Printf("ошибка закрытия БД: %v", err)
+		}
+	}()
+
+	taskRepo := sqlite.NewTask(db)
+	userRepo := sqlite.NewUser(db)
+
+	/* Hasher */
+	hasher := hasher.New()
 
 	/* Сервис */
-	serv := service.New(repo)
+	taskService := service.NewTask(taskRepo, userRepo)
+	userService := service.NewUser(userRepo, hasher)
+	jwtService := service.NewJWT(
+		service.JWTConfig{
+			JWTSecret:     cfg.JWTSecret,
+			JWTExpiration: cfg.JWTExpiration,
+		})
 
 	/* REST API */
-	restHandler := rest.NewHandler(serv)
+	restHandler := rest.NewHandler(taskService, userService, jwtService)
 	restRouter := rest.NewRouter(restHandler)
 
 	restServer := server.NewRESTServer(restRouter,

@@ -12,6 +12,9 @@ type Config struct {
 	AppMode  string
 	DBPath   string
 
+	JWTSecret     string
+	JWTExpiration time.Duration
+
 	ReadTimeout  time.Duration
 	WriteTimeout time.Duration
 	IdleTimeout  time.Duration
@@ -26,6 +29,9 @@ func Init() *Config {
 		RestPort: getEnvString("REST_PORT", "8080"),
 		AppMode:  getEnvString("APP_MODE", "prod"),
 		DBPath:   getEnvString("DB_PATH", "./tasks.db"),
+
+		JWTSecret:     getEnvString("JWT_SECRET", "default-secret-key-min-32-chars"),
+		JWTExpiration: getEnvDuration("JWT_EXP", time.Minute*15),
 
 		ReadTimeout:  getEnvDuration("READ_TIMEOUT", time.Second*10),
 		WriteTimeout: getEnvDuration("WRITE_TIMEOUT", time.Second*10),
