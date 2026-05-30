@@ -6,16 +6,16 @@ import (
 	"github.com/go-chi/chi/v5"
 	"net/http"
 	"todo/internal/model"
-	"todo/internal/service"
 )
 
 type RestHandler struct {
-	task service.ServiceTaskI
-	user service.ServiceUserI
+	task ServiceTask
+	user ServiceUser
+	jwt  ServiceJWT
 }
 
-func NewHandler(task service.ServiceTaskI, user service.ServiceUserI) *RestHandler {
-	return &RestHandler{task: task, user: user}
+func NewHandler(task ServiceTask, user ServiceUser, jwt ServiceJWT) *RestHandler {
+	return &RestHandler{task: task, user: user, jwt: jwt}
 }
 
 func (h *RestHandler) mainHandler(w http.ResponseWriter, r *http.Request) {
@@ -75,9 +75,20 @@ func (h *RestHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	token, err := h.jwt.GenerateToken(userID)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(UserResponse{ID: userID})
+
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"user_id":    userID,
+		"token":      token,
+		"token_type": "Bearer",
+	})
 }
 
 func (h *RestHandler) getAllTasks(w http.ResponseWriter, r *http.Request) {

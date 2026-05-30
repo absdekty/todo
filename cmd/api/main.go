@@ -22,6 +22,11 @@ func main() {
 	if err != nil {
 		logger.Error.Fatalf("ошибка запуска репозитория: %v", err)
 	}
+	defer func() {
+		if err := db.Close(); err != nil {
+			logger.Error.Printf("ошибка закрытия БД: %v", err)
+		}
+	}()
 
 	taskRepo := sqlite.NewTask(db)
 	userRepo := sqlite.NewUser(db)
@@ -32,10 +37,14 @@ func main() {
 	/* Сервис */
 	taskService := service.NewTask(taskRepo, userRepo)
 	userService := service.NewUser(userRepo, hasher)
+	jwtService := service.NewJWT(
+		service.JWTConfig{
+			JWTSecret:     cfg.JWTSecret,
+			JWTExpiration: cfg.JWTExpiration,
+		})
 
 	/* REST API */
-
-	restHandler := rest.NewHandler(taskService, userService)
+	restHandler := rest.NewHandler(taskService, userService, jwtService)
 	restRouter := rest.NewRouter(restHandler)
 
 	restServer := server.NewRESTServer(restRouter,

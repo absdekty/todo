@@ -12,14 +12,6 @@ type PasswordHasher interface {
 	Compare(hashedPassword, password string) bool
 }
 
-type ServiceUserI interface {
-	CreateUser(ctx context.Context, name, password string) error
-	FindByName(ctx context.Context, name string) (*model.User, error)
-	Login(ctx context.Context, name, password string) (string, error)
-}
-
-var _ ServiceUserI = (*ServiceUser)(nil)
-
 type ServiceUser struct {
 	repo   repository.RepositoryUser
 	hasher PasswordHasher

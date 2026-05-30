@@ -7,16 +7,6 @@ import (
 	"todo/internal/repository"
 )
 
-type ServiceTaskI interface {
-	CreateTask(ctx context.Context, userID, title, description string) (*model.Task, error)
-	GetTasks(ctx context.Context, userID string) ([]*model.Task, error)
-	GetTaskByID(ctx context.Context, userID, taskID string) (*model.Task, error)
-	UpdateTask(ctx context.Context, task *model.Task) error
-	DeleteTask(ctx context.Context, userID, taskID string) error
-}
-
-var _ ServiceTaskI = (*ServiceTask)(nil)
-
 type ServiceTask struct {
 	repo     repository.RepositoryTask
 	userRepo repository.RepositoryUser
