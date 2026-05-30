@@ -19,7 +19,7 @@ type ServiceUser interface {
 	Login(ctx context.Context, name, password string) (string, error)
 }
 
-type ServiceJWT interface {
+type ServiceToken interface {
 	GenerateToken(userID string) (string, error)
 	ValidateToken(token string) (string, error)
 }

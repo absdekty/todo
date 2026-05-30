@@ -9,13 +9,13 @@ import (
 )
 
 type RestHandler struct {
-	task ServiceTask
-	user ServiceUser
-	jwt  ServiceJWT
+	task  ServiceTask
+	user  ServiceUser
+	token ServiceToken
 }
 
-func NewHandler(task ServiceTask, user ServiceUser, jwt ServiceJWT) *RestHandler {
-	return &RestHandler{task: task, user: user, jwt: jwt}
+func NewHandler(task ServiceTask, user ServiceUser, token ServiceToken) *RestHandler {
+	return &RestHandler{task: task, user: user, token: token}
 }
 
 func (h *RestHandler) mainHandler(w http.ResponseWriter, r *http.Request) {
@@ -75,7 +75,7 @@ func (h *RestHandler) LoginUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	token, err := h.jwt.GenerateToken(userID)
+	token, err := h.token.GenerateToken(userID)
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return

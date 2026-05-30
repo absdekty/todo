@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"todo/internal/model"
-	"todo/internal/repository"
 )
 
 type PasswordHasher interface {
@@ -12,12 +11,18 @@ type PasswordHasher interface {
 	Compare(hashedPassword, password string) bool
 }
 
+type UserRepository interface {
+	CreateUser(ctx context.Context, user *model.User) error
+	FindByName(ctx context.Context, name string) (*model.User, error)
+	FindByID(ctx context.Context, userID string) (*model.User, error)
+}
+
 type ServiceUser struct {
-	repo   repository.RepositoryUser
+	repo   UserRepository
 	hasher PasswordHasher
 }
 
-func NewUser(repo repository.RepositoryUser, hasher PasswordHasher) *ServiceUser {
+func NewUser(repo UserRepository, hasher PasswordHasher) *ServiceUser {
 	return &ServiceUser{
 		repo:   repo,
 		hasher: hasher,

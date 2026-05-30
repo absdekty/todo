@@ -4,15 +4,26 @@ import (
 	"context"
 	"fmt"
 	"todo/internal/model"
-	"todo/internal/repository"
 )
 
-type ServiceTask struct {
-	repo     repository.RepositoryTask
-	userRepo repository.RepositoryUser
+type TaskRepository interface {
+	CreateTask(ctx context.Context, task *model.Task) error
+	GetTasks(ctx context.Context, userID string) ([]*model.Task, error)
+	GetTaskByID(ctx context.Context, userID, taskID string) (*model.Task, error)
+	UpdateTask(ctx context.Context, task *model.Task) error
+	DeleteTask(ctx context.Context, userID, taskID string) error
 }
 
-func NewTask(repo repository.RepositoryTask, userRepo repository.RepositoryUser) *ServiceTask {
+type UserFinder interface {
+	FindByID(ctx context.Context, userID string) (*model.User, error)
+}
+
+type ServiceTask struct {
+	repo     TaskRepository
+	userRepo UserFinder
+}
+
+func NewTask(repo TaskRepository, userRepo UserFinder) *ServiceTask {
 	return &ServiceTask{repo: repo, userRepo: userRepo}
 }
 

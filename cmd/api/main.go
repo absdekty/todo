@@ -37,14 +37,14 @@ func main() {
 	/* Сервис */
 	taskService := service.NewTask(taskRepo, userRepo)
 	userService := service.NewUser(userRepo, hasher)
-	jwtService := service.NewJWT(
+	tokenService := service.NewJWT(
 		service.JWTConfig{
 			JWTSecret:     cfg.JWTSecret,
 			JWTExpiration: cfg.JWTExpiration,
 		})
 
 	/* REST API */
-	restHandler := rest.NewHandler(taskService, userService, jwtService)
+	restHandler := rest.NewHandler(taskService, userService, tokenService)
 	restRouter := rest.NewRouter(restHandler)
 
 	restServer := server.NewRESTServer(restRouter,
