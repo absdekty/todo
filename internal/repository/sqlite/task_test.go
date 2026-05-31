@@ -41,15 +41,15 @@ func TestCreateTask(t *testing.T) {
 	}
 }
 
-func TestGetTasks(t *testing.T) {
-	_, err := setupTaskDB(t).GetTasks(context.Background(), "")
+func TestGetUserTasks(t *testing.T) {
+	_, err := setupTaskDB(t).GetUserTasks(context.Background(), "")
 	if err != nil {
 		t.Errorf("not expected error, but got: %v", err)
 	}
 }
 
 func TestGetTaskByID(t *testing.T) {
-	if _, err := setupTaskDB(t).GetTaskByID(context.Background(), "", ""); err != nil {
+	if _, err := setupTaskDB(t).GetTaskByID(context.Background(), ""); err != nil {
 		if !errors.Is(err, model.ErrTaskNotExist) {
 			t.Errorf("not expected error, but got: %v", err)
 		}
@@ -127,7 +127,7 @@ func TestDeleteTask(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := db.DeleteTask(context.Background(), "550e8400-e29b-41d4-a716-446655440000", tt.taskID); err != nil && !tt.wantErr {
+			if err := db.DeleteTask(context.Background(), tt.taskID); err != nil && !tt.wantErr {
 				t.Errorf("not expected error, but got: %v", err)
 			}
 		})

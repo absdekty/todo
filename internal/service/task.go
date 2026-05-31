@@ -8,10 +8,10 @@ import (
 
 type TaskRepository interface {
 	CreateTask(ctx context.Context, task *model.Task) error
-	GetTasks(ctx context.Context, userID string) ([]*model.Task, error)
-	GetTaskByID(ctx context.Context, userID, taskID string) (*model.Task, error)
+	GetUserTasks(ctx context.Context, userID string) ([]*model.Task, error)
+	GetTaskByID(ctx context.Context, taskID string) (*model.Task, error)
 	UpdateTask(ctx context.Context, task *model.Task) error
-	DeleteTask(ctx context.Context, userID, taskID string) error
+	DeleteTask(ctx context.Context, taskID string) error
 }
 
 type UserFinder interface {
@@ -48,7 +48,7 @@ func (s *ServiceTask) CreateTask(ctx context.Context, userID, title, description
 	return task, nil
 }
 
-func (s *ServiceTask) GetTasks(ctx context.Context, userID string) ([]*model.Task, error) {
+func (s *ServiceTask) GetUserTasks(ctx context.Context, userID string) ([]*model.Task, error) {
 	if err := model.UserValidateID(userID); err != nil {
 		return nil, fmt.Errorf("get tasks (validate user): %w", err)
 	}
@@ -57,7 +57,7 @@ func (s *ServiceTask) GetTasks(ctx context.Context, userID string) ([]*model.Tas
 		return nil, fmt.Errorf("get tasks (repo user): %w", err)
 	}
 
-	return s.repo.GetTasks(ctx, userID)
+	return s.repo.GetUserTasks(ctx, userID)
 }
 
 func (s *ServiceTask) GetTaskByID(ctx context.Context, userID, taskID string) (*model.Task, error) {
@@ -73,7 +73,15 @@ func (s *ServiceTask) GetTaskByID(ctx context.Context, userID, taskID string) (*
 		return nil, fmt.Errorf("get task by id (validate task): %w", err)
 	}
 
-	return s.repo.GetTaskByID(ctx, userID, taskID)
+	task, err := s.repo.GetTaskByID(ctx, taskID)
+	if err != nil {
+		return nil, err
+	}
+	if task.UserID != userID {
+		return nil, model.ErrUserForbidden
+	}
+
+	return task, nil
 }
 
 func (s *ServiceTask) UpdateTask(ctx context.Context, task *model.Task) error {
@@ -87,6 +95,10 @@ func (s *ServiceTask) UpdateTask(ctx context.Context, task *model.Task) error {
 
 	if _, err := s.userRepo.FindByID(ctx, task.UserID); err != nil {
 		return fmt.Errorf("update task (repo user): %w", err)
+	}
+
+	if err := s.equalTaskOwnership(ctx, task.UserID, task.ID); err != nil {
+		return err
 	}
 
 	return s.repo.UpdateTask(ctx, task)
@@ -105,5 +117,20 @@ func (s *ServiceTask) DeleteTask(ctx context.Context, userID, taskID string) err
 		return fmt.Errorf("delete task (validate task): %w", err)
 	}
 
-	return s.repo.DeleteTask(ctx, userID, taskID)
+	if err := s.equalTaskOwnership(ctx, userID, taskID); err != nil {
+		return err
+	}
+
+	return s.repo.DeleteTask(ctx, taskID)
+}
+
+func (s *ServiceTask) equalTaskOwnership(ctx context.Context, userID, taskID string) error {
+	task, err := s.repo.GetTaskByID(ctx, taskID)
+	if err != nil {
+		return fmt.Errorf("task ownership: %w", err)
+	}
+	if task.UserID != userID {
+		return model.ErrUserForbidden
+	}
+	return nil
 }

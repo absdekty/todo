@@ -34,15 +34,15 @@ func (r *RepositoryTask) CreateTask(ctx context.Context, task *model.Task) error
 	return nil
 }
 
-func (r *RepositoryTask) GetTaskByID(ctx context.Context, userID, taskID string) (*model.Task, error) {
+func (r *RepositoryTask) GetTaskByID(ctx context.Context, taskID string) (*model.Task, error) {
 	query := `
 		SELECT
 		id, userid, title, description, completed, created, updated
 		FROM tasks
-		WHERE id=? AND userid=?`
+		WHERE id=?`
 
 	var task model.Task
-	err := r.QueryRowContext(ctx, query, taskID, userID).Scan(
+	err := r.QueryRowContext(ctx, query, taskID).Scan(
 		&task.ID, &task.UserID, &task.Title, &task.Description, &task.Completed, &task.CreatedAt, &task.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, model.ErrTaskNotExist
@@ -54,7 +54,7 @@ func (r *RepositoryTask) GetTaskByID(ctx context.Context, userID, taskID string)
 	return &task, nil
 }
 
-func (r *RepositoryTask) GetTasks(ctx context.Context, userID string) ([]*model.Task, error) {
+func (r *RepositoryTask) GetUserTasks(ctx context.Context, userID string) ([]*model.Task, error) {
 	query := `
 		SELECT
 		id, userid, title, description, completed, created, updated
@@ -89,9 +89,9 @@ func (r *RepositoryTask) UpdateTask(ctx context.Context, task *model.Task) error
 	query := `
 		UPDATE tasks SET
 		title=?, description=?, completed=?, updated=?
-		WHERE id=? AND userid=?`
+		WHERE id=?`
 
-	result, err := r.ExecContext(ctx, query, task.Title, task.Description, task.Completed, task.UpdatedAt, task.ID, task.UserID)
+	result, err := r.ExecContext(ctx, query, task.Title, task.Description, task.Completed, task.UpdatedAt, task.ID)
 	if err != nil {
 		return err
 	}
@@ -103,12 +103,12 @@ func (r *RepositoryTask) UpdateTask(ctx context.Context, task *model.Task) error
 	return nil
 }
 
-func (r *RepositoryTask) DeleteTask(ctx context.Context, userID, taskID string) error {
+func (r *RepositoryTask) DeleteTask(ctx context.Context, taskID string) error {
 	query := `
 		DELETE FROM tasks
-		WHERE id=? AND userid=?`
+		WHERE id=?`
 
-	result, err := r.ExecContext(ctx, query, taskID, userID)
+	result, err := r.ExecContext(ctx, query, taskID)
 	if err != nil {
 		return err
 	}

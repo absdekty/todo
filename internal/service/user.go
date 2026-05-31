@@ -14,7 +14,6 @@ type PasswordHasher interface {
 type UserRepository interface {
 	CreateUser(ctx context.Context, user *model.User) error
 	FindByName(ctx context.Context, name string) (*model.User, error)
-	FindByID(ctx context.Context, userID string) (*model.User, error)
 }
 
 type ServiceUser struct {

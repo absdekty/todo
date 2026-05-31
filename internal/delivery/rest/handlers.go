@@ -98,7 +98,7 @@ func (h *RestHandler) getAllTasks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tasks, err := h.task.GetTasks(r.Context(), userID)
+	tasks, err := h.task.GetUserTasks(r.Context(), userID)
 	if err != nil {
 		if errors.Is(err, model.ErrUserNotExist) {
 			http.Error(w, "User not found", http.StatusNotFound)

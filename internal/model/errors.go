@@ -30,6 +30,7 @@ var (
 var (
 	ErrTaskIsNil     = errors.New("Задача не может быть ниловой")
 	ErrUserInvalidPW = errors.New("Неверный пароль")
+	ErrUserForbidden = errors.New("Отказ в доступе")
 )
 
 /* handler */
