@@ -14,10 +14,13 @@ type contextKey string
 
 const UserIDKey contextKey = "userID"
 
-func setupMiddleware(r *chi.Mux) {
+func setupMiddleware(r *chi.Mux, metrics *Metrics) {
+	r.Use(middleware.RealIP)
+	r.Use(middleware.RequestID)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(time.Second * 10))
+	r.Use(metrics.Handler)
 }
 
 func (h *RestHandler) AuthMiddleware(next http.Handler) http.Handler {

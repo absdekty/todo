@@ -9,17 +9,27 @@ import (
 )
 
 type RestHandler struct {
-	task  ServiceTask
-	user  ServiceUser
-	token ServiceToken
+	task    ServiceTask
+	user    ServiceUser
+	token   ServiceToken
+	metrics *Metrics
 }
 
-func NewHandler(task ServiceTask, user ServiceUser, token ServiceToken) *RestHandler {
-	return &RestHandler{task: task, user: user, token: token}
+func NewHandler(task ServiceTask, user ServiceUser, token ServiceToken, metrics *Metrics) *RestHandler {
+	return &RestHandler{task: task, user: user, token: token, metrics: metrics}
 }
 
 func (h *RestHandler) mainHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Default Page"))
+}
+
+func (h *RestHandler) GetMetrics(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"total_requests":   h.metrics.GetTotalRequests(),
+		"active_requests":  h.metrics.GetActiveRequests(),
+		"errors_total":     h.metrics.GetErrorsTotal(),
+		"errors_by_status": h.metrics.GetErrorsByStatus()})
 }
 
 func (h *RestHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {

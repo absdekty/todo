@@ -7,11 +7,14 @@ import (
 func NewRouter(handler *RestHandler) *chi.Mux {
 	r := chi.NewRouter()
 
-	setupMiddleware(r)
+	setupMiddleware(r, handler.metrics)
 
-	r.Post("/register", handler.RegisterUser)
-	r.Post("/login", handler.LoginUser)
+	r.Post("/register", handler.RegisterUser) // POST /register - зарегистрировать пользователя
+	r.Post("/login", handler.LoginUser)       // POST /login - аутентифицироваться, получить токен
+
 	r.Get("/", handler.mainHandler)
+
+	r.Get("/metrics", handler.GetMetrics) // GET /metrics - получить актуальные метрики
 
 	r.Route("/tasks", func(r chi.Router) {
 		r.Use(handler.AuthMiddleware)

@@ -44,7 +44,8 @@ func main() {
 		})
 
 	/* REST API */
-	restHandler := rest.NewHandler(taskService, userService, tokenService)
+	metrics := rest.NewMetrics()
+	restHandler := rest.NewHandler(taskService, userService, tokenService, metrics)
 	restRouter := rest.NewRouter(restHandler)
 
 	restServer := server.NewRESTServer(restRouter,
