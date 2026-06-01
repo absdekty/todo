@@ -1,33 +1,99 @@
 # Todo REST API
 
-REST API для управлением задачами, реализованный на Go
+REST API для управления задачами, реализованный на Go.
 
 ## Технологии
-Go 1.20
-Chi
-SQLite3
+
+- Go 1.20+
+- Chi (роутер)
+- SQLite3 (БД)
+- JWT (авторизация)
+- Bcrypt (хэширование паролей)
 
 ## Особенности
-1. Clean Architecture
-2. SQLite3 в качестве базы данных
-3. REST API с JSON форматом
-4. Конфигурация: возможность установки порта для сервера, пути для БД, таймаутов запросов и shutdown-таймаута
-5. TaskFile для быстрого выполнения команд
 
-### Эндпоинты
-GET /tasks - Список задач
-GET /tasks{id} - Получить конкретную задачу
-POST /tasks - Создать задачу
-PUT /tasks/{id} - Частично обновить задачу
-PATCH /tasks/{id} - Частично обновить задачу
-DELETE /tasks/{id} - Удалить задачу
+- Clean Architecture
+- Graceful Shutdown
+- Метрики (total_requests, active_requests, errors)
+- Middleware (логирование, recovery)
+- Unit-тесты (model, service, repository)
 
-### Конфигурация .env
-REST_PORT=8080 - Порт, на котором будет запускаться сервер
-APP_MODE=prod - Статус сервиса
-DB_PATH=./tasks.db - Путь сохранения БД SQLite3
+## Эндпоинты
 
-READ_TIMEOUT=10 - Таймаут на чтение клиента сервером
-WRITE_TIMEOUT=10 - Таймаут на запись клиенту сервером
-IDLE_TIMEOUT=30 - Таймаут на закрытие соединения после бездействия в течение N секунд
-SHUTDOWN_TIMEOUT=30 - Сколько времени даётся серверу на завершение всех запросов после SIGTERM, SIGINT
+### Публичные
+
+| Метод |   Эндпоинт  | Описание |
+|-------|-------------|----------|
+| POST  | `/register` | Регистрация пользователя |
+| POST  | `/login`    | Аутентификация, получение JWT токена |
+| GET   | `/metrics`  | Метрики сервера |
+
+### Защищенные (требуют Bearer токен)
+
+| Метод  |    Эндпоинт   | Описание |
+|--------|---------------|----------|
+| GET    | `/tasks`      | Получить все задачи пользователя |
+| GET    | `/tasks/{id}` | Получить конкретную задачу |
+| POST   | `/tasks`      | Создать задачу |
+| PUT    | `/tasks/{id}` | Полностью обновить задачу |
+| PATCH  | `/tasks/{id}` | Частично обновить задачу |
+| DELETE | `/tasks/{id}` | Удалить задачу |
+
+## Пример использования (Использовать в одном bash-терминале)
+
+#### Регистрация
+```
+curl -X POST http://localhost:8080/register \
+  -H "Content-Type: application/json" \
+  -d '{"name":"testuser","password":"password123"}'
+```
+
+#### Аутентификация+получение токена
+```
+TOKEN=$(curl -s -X POST http://localhost:8080/login \
+  -H "Content-Type: application/json" \
+  -d '{"name":"testuser","password":"password123"}' \
+  | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+```
+
+#### Создание задачи
+```
+curl -X POST http://localhost:8080/tasks \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Buy groceries","desc":"Milk, eggs, bread"}'
+```
+
+#### Получить все задачи
+```
+curl -X GET http://localhost:8080/tasks \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+#### Получить конкретную задачу по ID
+```
+curl -X GET http://localhost:8080/ID-ЗАДАЧИ \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+#### Обновить всю задачу
+```
+curl -X PUT http://localhost:8080/tasks/ID-ЗАДАЧИ \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Buy groceries","desc":"Milk, eggs, bread, cheese","completed":true}'
+```
+
+#### Обновить любые поля(все виды полей в запросе PUT)
+```
+curl -X PATCH http://localhost:8080/tasks/ID-ЗАДАЧИ \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"completed":true}'
+```
+
+#### Удалить задачу
+```
+curl -X DELETE http://localhost:8080/tasks/ID-ЗАДАЧИ \
+  -H "Authorization: Bearer $TOKEN"
+```
