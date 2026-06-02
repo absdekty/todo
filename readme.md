@@ -26,6 +26,8 @@ REST API для управления задачами, реализованны�
 |-------|-------------|----------|
 | POST  | `/register` | Регистрация пользователя |
 | POST  | `/login`    | Аутентификация, получение JWT токена |
+| POST  | `/refresh`  | Получение нового access-токена |
+| POST  | `/logout`   | Выход с сессии, очистка куки |
 | GET   | `/metrics`  | Метрики сервера |
 
 ### Защищенные (требуют Bearer токен)
@@ -50,10 +52,26 @@ curl -X POST http://localhost:8080/register \
 
 #### Аутентификация+получение токена
 ```
-TOKEN=$(curl -s -X POST http://localhost:8080/login \
+TOKEN=$(curl -X POST http://localhost:8080/login \
   -H "Content-Type: application/json" \
   -d '{"name":"testuser","password":"password123"}' \
+  -c cookies.txt \
   | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+```
+
+#### Получение access-токена по истечению
+```
+TOKEN=$(curl -X POST http://localhost:8080/refresh \
+  -b cookies.txt \
+  -c cookies.txt \
+  | grep -o '"token":"[^"]*"' | cut -d'"' -f4)
+```
+
+#### Выход с сессии
+```
+curl -X POST http://localhost:8080/logout \
+  -c cookies.txt \
+  -b cookies.txt
 ```
 
 #### Создание задачи

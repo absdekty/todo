@@ -39,7 +39,7 @@ func (h *RestHandler) AuthMiddleware(next http.Handler) http.Handler {
 
 		token := parts[1]
 
-		userID, err := h.token.ValidateToken(token)
+		userID, err := h.token.ValidateAccessToken(token)
 		if err != nil {
 			http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
 			return

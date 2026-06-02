@@ -8,127 +8,249 @@ import (
 )
 
 func TestCreateTask(t *testing.T) {
-	db := setupTaskDB(t)
+	t.Parallel()
 
-	task, err := model.NewTask("550e8400-e29b-41d4-a716-446655440000", "...", "")
-	if err != nil {
-		t.Skipf("new task: %v", err)
-	}
+	ctx := context.Background()
 
 	tests := []struct {
-		name    string
-		task    *model.Task
-		wantErr bool
+		name      string
+		task      *model.Task
+		setup     func(repo *dbRepo)
+		wantError error
 	}{
 		{
-			name:    "обычная задача",
-			task:    task,
-			wantErr: false,
+			name: "Валидный таск",
+			task: &model.Task{ID: "taskid", UserID: "userid"},
+			setup: func(repo *dbRepo) {
+				repo.user.CreateUser(context.Background(), &model.User{ID: "userid"})
+			},
+			wantError: nil,
 		},
 		{
-			name:    "ID прошлой задачи",
-			task:    task,
-			wantErr: true,
+			name: "Идентичный таск",
+			task: &model.Task{ID: "taskid", UserID: "userid"},
+			setup: func(repo *dbRepo) {
+				repo.user.CreateUser(context.Background(), &model.User{ID: "userid"})
+				repo.task.CreateTask(context.Background(), &model.Task{ID: "taskid", UserID: "userid"})
+			},
+			wantError: model.ErrTaskAlreadyExist,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := db.CreateTask(context.Background(), task); err != nil && !tt.wantErr {
-				t.Errorf("not expected error, but got: %v", err)
+			repo := setupDB(t)
+			tt.setup(repo)
+
+			err := repo.task.CreateTask(ctx, tt.task)
+			if tt.wantError != nil {
+				if !errors.Is(err, tt.wantError) {
+					t.Errorf("expected %v, got %v", tt.wantError, err)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("expected no error, got %v", err)
+				}
 			}
 		})
 	}
 }
 
 func TestGetUserTasks(t *testing.T) {
-	_, err := setupTaskDB(t).GetUserTasks(context.Background(), "")
-	if err != nil {
-		t.Errorf("not expected error, but got: %v", err)
-	}
-}
+	t.Parallel()
 
-func TestGetTaskByID(t *testing.T) {
-	if _, err := setupTaskDB(t).GetTaskByID(context.Background(), ""); err != nil {
-		if !errors.Is(err, model.ErrTaskNotExist) {
-			t.Errorf("not expected error, but got: %v", err)
-		}
-	}
-}
-
-func TestUpdateTask(t *testing.T) {
-	db := setupTaskDB(t)
-
-	task1, err1 := model.NewTask("550e8400-e29b-41d4-a716-446655440000", "...", "")
-	task2, err2 := model.NewTask("550e8400-e29b-41d4-a716-446655440000", "...", "")
-	if err1 != nil {
-		t.Skipf("ошибка создания задачи: %v", err1)
-	}
-	if err2 != nil {
-		t.Skipf("ошибка создания задачи: %v", err2)
-	}
-	if err := db.CreateTask(context.Background(), task1); err != nil {
-		t.Skipf("ошибка создания задачи(db): %v", err)
-	}
+	ctx := context.Background()
 
 	tests := []struct {
-		name    string
-		task    *model.Task
-		wantErr bool
+		name       string
+		userid     string
+		setup      func(repo *dbRepo)
+		wantError  error
+		countTasks int
 	}{
 		{
-			name:    "задача существует",
-			task:    task1,
-			wantErr: false,
+			name:   "У пользователя 2 задачи",
+			userid: "userid",
+			setup: func(repo *dbRepo) {
+				repo.user.CreateUser(context.Background(), &model.User{ID: "userid"})
+				repo.task.CreateTask(context.Background(), &model.Task{ID: "taskid1", UserID: "userid"})
+				repo.task.CreateTask(context.Background(), &model.Task{ID: "taskid2", UserID: "userid"})
+				repo.task.CreateTask(context.Background(), &model.Task{ID: "taskid", UserID: "userid1"})
+			},
+			wantError:  nil,
+			countTasks: 2,
 		},
 		{
-			name:    "задача не существует",
-			task:    task2,
-			wantErr: true,
+			name:   "У пользователя нет задач",
+			userid: "userid",
+			setup: func(repo *dbRepo) {
+				repo.user.CreateUser(context.Background(), &model.User{ID: "userid"})
+				repo.task.CreateTask(context.Background(), &model.Task{ID: "taskid", UserID: "userid1"})
+			},
+			wantError:  nil,
+			countTasks: 0,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := db.UpdateTask(context.Background(), tt.task); err != nil && !tt.wantErr {
-				t.Errorf("not expected error, but got: %v", err)
+			repo := setupDB(t)
+			tt.setup(repo)
+
+			tasks, err := repo.task.GetUserTasks(ctx, tt.userid)
+			if tt.wantError != nil {
+				if !errors.Is(err, tt.wantError) {
+					t.Errorf("expected %v, got %v", tt.wantError, err)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("expected no error, got %v", err)
+				}
+			}
+
+			if len(tasks) != tt.countTasks {
+				t.Errorf("expected task count=%d, got %d", tt.countTasks, len(tasks))
+			}
+		})
+	}
+}
+
+func TestGetTaskByID(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	tests := []struct {
+		name      string
+		taskid    string
+		setup     func(repo *dbRepo)
+		wantError error
+	}{
+		{
+			name:   "Существует",
+			taskid: "taskid",
+			setup: func(repo *dbRepo) {
+				repo.user.CreateUser(context.Background(), &model.User{ID: "userid"})
+				repo.task.CreateTask(context.Background(), &model.Task{ID: "taskid", UserID: "userid"})
+			},
+			wantError: nil,
+		},
+		{
+			name:      "Не существует",
+			taskid:    "taskid",
+			setup:     func(repo *dbRepo) {},
+			wantError: model.ErrTaskNotExist,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := setupDB(t)
+			tt.setup(repo)
+
+			_, err := repo.task.GetTaskByID(ctx, tt.taskid)
+			if tt.wantError != nil {
+				if !errors.Is(err, tt.wantError) {
+					t.Errorf("expected %v, got %v", tt.wantError, err)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("expected no error, got %v", err)
+				}
+			}
+		})
+	}
+}
+
+func TestUpdateTask(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	tests := []struct {
+		name        string
+		updatedTask *model.Task
+		setup       func(repo *dbRepo)
+		wantError   error
+	}{
+		{
+			name:        "Существует",
+			updatedTask: &model.Task{ID: "taskid", Title: "new title"},
+			setup: func(repo *dbRepo) {
+				repo.user.CreateUser(context.Background(), &model.User{ID: "userid"})
+				repo.task.CreateTask(context.Background(), &model.Task{ID: "taskid", UserID: "userid"})
+			},
+			wantError: nil,
+		},
+		{
+			name:        "Не существует",
+			updatedTask: &model.Task{ID: "taskid", Title: "new title"},
+			setup:       func(repo *dbRepo) {},
+			wantError:   model.ErrTaskNotExist,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := setupDB(t)
+			tt.setup(repo)
+
+			err := repo.task.UpdateTask(ctx, tt.updatedTask)
+			if tt.wantError != nil {
+				if !errors.Is(err, tt.wantError) {
+					t.Errorf("expected %v, got %v", tt.wantError, err)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("expected no error, got %v", err)
+				}
 			}
 		})
 	}
 }
 
 func TestDeleteTask(t *testing.T) {
-	db := setupTaskDB(t)
+	t.Parallel()
 
-	task, err := model.NewTask("550e8400-e29b-41d4-a716-446655440000", "...", "")
-	if err != nil {
-		t.Skipf("ошибка создания задачи: %v", err)
-	}
-	if err := db.CreateTask(context.Background(), task); err != nil {
-		t.Skipf("ошибка создания задачи(db): %v", err)
-	}
+	ctx := context.Background()
 
 	tests := []struct {
-		name    string
-		taskID  string
-		wantErr bool
+		name      string
+		taskid    string
+		setup     func(repo *dbRepo)
+		wantError error
 	}{
 		{
-			name:    "задача существует",
-			taskID:  task.ID,
-			wantErr: false,
+			name:   "Существует",
+			taskid: "taskid",
+			setup: func(repo *dbRepo) {
+				repo.user.CreateUser(context.Background(), &model.User{ID: "userid"})
+				repo.task.CreateTask(context.Background(), &model.Task{ID: "taskid", UserID: "userid"})
+			},
+			wantError: nil,
 		},
 		{
-			name:    "задача не существует",
-			taskID:  "",
-			wantErr: true,
+			name:      "Не существует",
+			taskid:    "taskid",
+			setup:     func(repo *dbRepo) {},
+			wantError: model.ErrTaskNotExist,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := db.DeleteTask(context.Background(), tt.taskID); err != nil && !tt.wantErr {
-				t.Errorf("not expected error, but got: %v", err)
+			repo := setupDB(t)
+			tt.setup(repo)
+
+			err := repo.task.DeleteTask(ctx, tt.taskid)
+			if tt.wantError != nil {
+				if !errors.Is(err, tt.wantError) {
+					t.Errorf("expected %v, got %v", tt.wantError, err)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("expected no error, got %v", err)
+				}
 			}
 		})
 	}

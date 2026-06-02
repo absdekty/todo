@@ -12,8 +12,10 @@ type Config struct {
 	AppMode  string
 	DBPath   string
 
-	JWTSecret     string
-	JWTExpiration time.Duration
+	JWTSecretA     string
+	JWTSecretR     string
+	JWTExpirationA time.Duration
+	JWTExpirationR time.Duration
 
 	ReadTimeout  time.Duration
 	WriteTimeout time.Duration
@@ -30,8 +32,10 @@ func Init() *Config {
 		AppMode:  getEnvString("APP_MODE", "prod"),
 		DBPath:   getEnvString("DB_PATH", "./tasks.db"),
 
-		JWTSecret:     getEnvString("JWT_SECRET", "default-secret-key-min-32-chars"),
-		JWTExpiration: getEnvDuration("JWT_EXP", time.Minute*15),
+		JWTSecretA:     getEnvString("JWT_SECRET_A", "default-secret-key-min-32-chars"),
+		JWTSecretR:     getEnvString("JWT_SECRET_R", "default-secret-key-min-32-chars"),
+		JWTExpirationA: getEnvDuration("JWT_EXP_A", time.Minute*15),
+		JWTExpirationR: getEnvDuration("JWT_EXP_R", time.Hour*24*7),
 
 		ReadTimeout:  getEnvDuration("READ_TIMEOUT", time.Second*10),
 		WriteTimeout: getEnvDuration("WRITE_TIMEOUT", time.Second*10),

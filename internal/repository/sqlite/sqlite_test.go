@@ -1,11 +1,16 @@
 package sqlite
 
 import (
-	"database/sql"
 	"testing"
 )
 
-func setupDB(t *testing.T) *sql.DB {
+type dbRepo struct {
+	user  *RepositoryUser
+	task  *RepositoryTask
+	token *RepositoryToken
+}
+
+func setupDB(t *testing.T) *dbRepo {
 	t.Helper()
 
 	db, err := New(":memory:")
@@ -13,15 +18,9 @@ func setupDB(t *testing.T) *sql.DB {
 		t.Fatalf("ошибка инициализации БД: %v", err)
 	}
 
-	return db
-}
-
-func setupTaskDB(t *testing.T) *RepositoryTask {
-	t.Helper()
-	return NewTask(setupDB(t))
-}
-
-func setupUserDB(t *testing.T) *RepositoryUser {
-	t.Helper()
-	return NewUser(setupDB(t))
+	return &dbRepo{
+		user:  NewUser(db),
+		task:  NewTask(db),
+		token: NewToken(db),
+	}
 }

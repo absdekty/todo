@@ -11,6 +11,8 @@ func NewRouter(handler *RestHandler) *chi.Mux {
 
 	r.Post("/register", handler.RegisterUser) // POST /register - зарегистрировать пользователя
 	r.Post("/login", handler.LoginUser)       // POST /login - аутентифицироваться, получить токен
+	r.Post("/refresh", handler.RefreshTokens) // POST /refresh - аутентификация по рефреш токену
+	r.Post("/logout", handler.LogoutUser)     // POST /refresh - аутентификация по рефреш токену
 
 	r.Get("/", handler.mainHandler)
 

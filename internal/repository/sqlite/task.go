@@ -3,7 +3,9 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
+	"strings"
 	"todo/internal/model"
 )
 
@@ -24,6 +26,9 @@ func (r *RepositoryTask) CreateTask(ctx context.Context, task *model.Task) error
 	result, err := r.ExecContext(ctx, query,
 		task.ID, task.UserID, task.Title, task.Description, task.Completed, task.CreatedAt, task.UpdatedAt)
 	if err != nil {
+		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			return model.ErrTaskAlreadyExist
+		}
 		return fmt.Errorf("failed to create task: %w", err)
 	}
 
@@ -44,10 +49,10 @@ func (r *RepositoryTask) GetTaskByID(ctx context.Context, taskID string) (*model
 	var task model.Task
 	err := r.QueryRowContext(ctx, query, taskID).Scan(
 		&task.ID, &task.UserID, &task.Title, &task.Description, &task.Completed, &task.CreatedAt, &task.UpdatedAt)
-	if err == sql.ErrNoRows {
-		return nil, model.ErrTaskNotExist
-	}
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, model.ErrTaskNotExist
+		}
 		return nil, fmt.Errorf("failed to get task: %w", err)
 	}
 

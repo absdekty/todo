@@ -30,6 +30,7 @@ func main() {
 
 	taskRepo := sqlite.NewTask(db)
 	userRepo := sqlite.NewUser(db)
+	tokenRepo := sqlite.NewToken(db)
 
 	/* Hasher */
 	hasher := hasher.New()
@@ -38,9 +39,12 @@ func main() {
 	taskService := service.NewTask(taskRepo, userRepo)
 	userService := service.NewUser(userRepo, hasher)
 	tokenService := service.NewJWT(
+		tokenRepo,
 		service.JWTConfig{
-			JWTSecret:     cfg.JWTSecret,
-			JWTExpiration: cfg.JWTExpiration,
+			JWTSecretA:     cfg.JWTSecretA,
+			JWTSecretR:     cfg.JWTSecretR,
+			JWTExpirationA: cfg.JWTExpirationA,
+			JWTExpirationR: cfg.JWTExpirationR,
 		})
 
 	/* REST API */

@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"todo/internal/model"
@@ -41,10 +42,10 @@ func (r *RepositoryUser) FindByName(ctx context.Context, name string) (*model.Us
 	var user model.User
 	err := r.QueryRowContext(ctx, query, name).Scan(
 		&user.ID, &user.Name, &user.Password, &user.Role, &user.CreatedAt)
-	if err == sql.ErrNoRows {
-		return nil, model.ErrUserNotExist
-	}
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, model.ErrUserNotExist
+		}
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
@@ -59,10 +60,10 @@ func (r *RepositoryUser) FindByID(ctx context.Context, userID string) (*model.Us
 	var user model.User
 	err := r.QueryRowContext(ctx, query, userID).Scan(
 		&user.ID, &user.Name, &user.Password, &user.Role, &user.CreatedAt)
-	if err == sql.ErrNoRows {
-		return nil, model.ErrUserNotExist
-	}
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, model.ErrUserNotExist
+		}
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 

@@ -21,9 +21,12 @@ var (
 
 /* repository */
 var (
-	ErrTaskNotExist     = errors.New("Задача не существует")
-	ErrUserNotExist     = errors.New("Пользователь не существует")
-	ErrUserAlreadyExist = errors.New("Пользователь с таким name уже существует")
+	ErrTaskNotExist      = errors.New("Задача не существует")
+	ErrTaskAlreadyExist  = errors.New("Задача с таким id+userid уже существует")
+	ErrUserNotExist      = errors.New("Пользователь не существует")
+	ErrUserAlreadyExist  = errors.New("Пользователь с таким name уже существует")
+	ErrTokenNotExist     = errors.New("Токен не существует")
+	ErrTokenAlreadyExist = errors.New("Токен уже существует")
 )
 
 /* service */
@@ -31,6 +34,7 @@ var (
 	ErrTaskIsNil     = errors.New("Задача не может быть ниловой")
 	ErrUserInvalidPW = errors.New("Неверный пароль")
 	ErrUserForbidden = errors.New("Отказ в доступе")
+	ErrTokenRevoked  = errors.New("Токен отозван")
 )
 
 /* handler */

@@ -20,6 +20,8 @@ type ServiceUser interface {
 }
 
 type ServiceToken interface {
-	GenerateToken(userID string) (string, error)
-	ValidateToken(token string) (string, error)
+	GenerateTokens(ctx context.Context, userID string) (string, string, error)
+	ValidateAccessToken(tokenStr string) (string, error)
+	RevokeRefreshToken(ctx context.Context, tokenStr string) error
+	RefreshTokens(ctx context.Context, refreshTokenStr string) (string, string, error)
 }
