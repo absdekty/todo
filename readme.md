@@ -17,6 +17,7 @@ REST API для управления задачами, реализованны�
 - Метрики (total_requests, active_requests, errors)
 - Middleware (логирование, recovery)
 - Unit-тесты (model, service, repository)
+- TaskFile - автоматизация
 
 ## Эндпоинты
 
@@ -115,3 +116,16 @@ curl -X PATCH http://localhost:8080/tasks/ID-ЗАДАЧИ \
 curl -X DELETE http://localhost:8080/tasks/ID-ЗАДАЧИ \
   -H "Authorization: Bearer $TOKEN"
 ```
+
+## Действия автоматизации (TaskFile)
+
+| Команда | Комментарий |
+|---------|-------------|
+| run | Быстрый запуск |
+| build | Сделать исполняемым |
+| run-installed | Запуск исполняемого файла |
+| dev | Быстрый запуск в режиме разработчика |
+| test | Запустить тесты |
+| fmt | Форматирование кода |
+| tidy | Подзагрузка зависимостей |
+| clean | Очистка .db .exe файлов |
